@@ -1,0 +1,40 @@
+# Starter workflow: test an ephemeral preview deployment created by your
+# hosting provider (Vercel, Netlify, Render, ...). The deployment must report
+# environment_url; the action reads it automatically from the event.
+name: Midscene deployment
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+  MIDSCENE_MODEL_BASE_URL: ${{ vars.MIDSCENE_MODEL_BASE_URL }}
+  MIDSCENE_MODEL_NAME: ${{ vars.MIDSCENE_MODEL_NAME }}
+  MIDSCENE_MODEL_FAMILY: ${{ vars.MIDSCENE_MODEL_FAMILY }}
+
+jobs:
+  midscene:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Run Midscene YAML scripts against the deployment
+        uses: web-infra-dev/midscene-action@v0
+        with:
+          yaml-files: midscene-scripts
+          retries: '1'
+          max-cases: '20'
+          timeout-minutes: '10'
+          # No preview-url input needed: it comes from the
+          # deployment_status event's environment_url. Reference it in YAML as
+          # web.url: ${MIDSCENE_PREVIEW_URL}

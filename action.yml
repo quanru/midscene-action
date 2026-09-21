@@ -1,0 +1,152 @@
+name: 'Midscene Action'
+description: 'Run Midscene YAML scripts on your own runner, upload HTML reports and comment results on the pull request.'
+author: 'Midscene'
+branding:
+  icon: 'cpu'
+  color: 'purple'
+
+inputs:
+  yaml-files:
+    description: 'YAML file, directory or glob patterns to run (directories expand to **/*.yml and **/*.yaml). Multiple values are separated by newlines or spaces. Mutually exclusive with `config`.'
+    required: false
+    default: 'midscene-scripts'
+  config:
+    description: 'Path to a Midscene batch config YAML (passed as --config). Mutually exclusive with `yaml-files`.'
+    required: false
+    default: ''
+  setup:
+    description: 'Path to a setup script passed to the CLI via --setup.'
+    required: false
+    default: ''
+  working-directory:
+    description: 'Working directory. The .env file, YAML patterns and midscene_run/ are relative to it.'
+    required: false
+    default: '.'
+  concurrent:
+    description: 'Number of scripts to run concurrently (CLI --concurrent).'
+    required: false
+    default: '1'
+  retries:
+    description: 'Extra retry attempts for failed scripts (CLI --retry).'
+    required: false
+    default: '0'
+  continue-on-error:
+    description: 'Keep running remaining scripts after a failure (CLI --continue-on-error). The action still fails overall when any script fails.'
+    required: false
+    default: 'false'
+  headed:
+    description: 'Run the browser in headed mode. On Linux you must provide a virtual display (e.g. xvfb) yourself.'
+    required: false
+    default: 'false'
+  share-browser-context:
+    description: 'Share one browser context across scripts (CLI --share-browser-context).'
+    required: false
+    default: 'false'
+  summary-name:
+    description: 'File name of the batch summary JSON under <run-dir>/output/. Always pinned explicitly so the action can parse results deterministically.'
+    required: false
+    default: 'midscene-summary.json'
+  run-dir:
+    description: 'Midscene artifact root directory (exported as MIDSCENE_RUN_DIR). Defaults to midscene_run under the working directory.'
+    required: false
+    default: 'midscene_run'
+  extra-args:
+    description: 'Extra raw arguments appended to the CLI command. The --keep-window flag and shell metacharacters are rejected.'
+    required: false
+    default: ''
+  cli-version:
+    description: 'Version of @midscene/cli to install. Empty means the action built-in pinned version. Accepts an exact version (recommended), "latest", "beta" or a tarball URL.'
+    required: false
+    default: ''
+  npm-registry:
+    description: 'Optional npm registry URL used when installing the CLI.'
+    required: false
+    default: ''
+  cache:
+    description: 'Cache the npm cache and the Puppeteer browser download between runs.'
+    required: false
+    default: 'true'
+  install-browser-deps:
+    description: 'On Linux runners, install missing Chrome system packages automatically.'
+    required: false
+    default: 'true'
+  browser-executable:
+    description: 'Path to a custom Chrome/Chromium executable (exported as PUPPETEER_EXECUTABLE_PATH).'
+    required: false
+    default: ''
+  upload-artifact:
+    description: 'Upload the report directory as a workflow artifact.'
+    required: false
+    default: 'true'
+  artifact-name:
+    description: 'Name of the report artifact. Add a matrix suffix when using a job matrix.'
+    required: false
+    default: 'midscene-report'
+  artifact-extra-paths:
+    description: 'Extra paths (relative to the working directory) to upload, e.g. output or log. One per line.'
+    required: false
+    default: ''
+  retention-days:
+    description: 'Artifact retention in days.'
+    required: false
+    default: '7'
+  pr-comment:
+    description: 'Post or update a result comment on the pull request. Silently degrades to a log warning on fork PRs or without permission.'
+    required: false
+    default: 'true'
+  comment-identifier:
+    description: 'Identifier embedded in the comment marker. Use different values per matrix job to keep separate comment threads.'
+    required: false
+    default: 'default'
+  preview-url:
+    description: 'Explicit preview URL. When empty, the action reads environment_url from a successful deployment_status event.'
+    required: false
+    default: ''
+  preview-env:
+    description: 'Environment variable name that receives the preview URL. Reference it in YAML as web.url: ${MIDSCENE_PREVIEW_URL}.'
+    required: false
+    default: 'MIDSCENE_PREVIEW_URL'
+  max-cases:
+    description: 'Budget gate. Fail before spending any model tokens when the expanded YAML count exceeds this number.'
+    required: false
+    default: ''
+  timeout-minutes:
+    description: 'Wall-clock timeout for the whole CLI execution. Already produced reports are still uploaded on timeout.'
+    required: false
+    default: ''
+  fail-on-error:
+    description: 'Mark the action as failed when scripts fail. Set to false for observational jobs that should not block merging; results still appear in outputs, comments and artifacts.'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'Token used for pull request comments. Defaults to the workflow GITHUB_TOKEN. It is never passed to the Midscene child process.'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  success:
+    description: '"true" when every script succeeded, otherwise "false".'
+  total:
+    description: 'Total number of scripts.'
+  successful:
+    description: 'Number of successful scripts.'
+  failed:
+    description: 'Number of failed scripts.'
+  partial-failed:
+    description: 'Number of partially failed scripts.'
+  not-executed:
+    description: 'Number of scripts that were not executed.'
+  total-duration:
+    description: 'Total execution duration in milliseconds.'
+  summary-path:
+    description: 'Absolute path of the batch summary JSON.'
+  report-dir:
+    description: 'Absolute path of the report directory.'
+  run-url:
+    description: 'URL of the current workflow run (HTML reports live in its Artifacts area).'
+  preview-url:
+    description: 'Resolved preview URL (explicit input or deployment environment_url).'
+
+runs:
+  using: node20
+  main: dist/index.js

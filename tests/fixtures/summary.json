@@ -1,0 +1,41 @@
+{
+  "summary": {
+    "total": 3,
+    "successful": 1,
+    "failed": 1,
+    "partialFailed": 1,
+    "notExecuted": 0,
+    "totalDuration": 123456,
+    "generatedAt": "2026-09-20T00:00:00.000Z"
+  },
+  "results": [
+    {
+      "script": "01-home.yaml",
+      "success": true,
+      "resultType": "successful",
+      "report": "../report/01-home.html",
+      "output": "01-home-output.json",
+      "duration": 12000
+    },
+    {
+      "script": "02-interact.yaml",
+      "success": false,
+      "resultType": "failed",
+      "report": "../report/02-interact.html",
+      "retryReport": "../report/02-interact-retry.html",
+      "error": "aiAssert: the button label never changed to Done",
+      "attempts": [
+        { "report": "../report/02-interact.html" },
+        { "report": "../report/02-interact-retry.html" }
+      ],
+      "duration": 80000
+    },
+    {
+      "script": "03-partial.yaml",
+      "success": false,
+      "resultType": "partialFailed",
+      "error": "2 of 3 tasks failed",
+      "duration": 31456
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+name: E2E
+
+# Runs the action against itself with a real model. Fork pull requests skip
+# this job because they receive no secrets (see the job-level if condition).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      cli-version:
+        description: '@midscene/cli version spec (empty = action default; e.g. 1.13.0 or beta)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+  MIDSCENE_MODEL_BASE_URL: ${{ vars.MIDSCENE_MODEL_BASE_URL }}
+  MIDSCENE_MODEL_NAME: ${{ vars.MIDSCENE_MODEL_NAME }}
+  MIDSCENE_MODEL_FAMILY: ${{ vars.MIDSCENE_MODEL_FAMILY }}
+  MIDSCENE_MODEL_RETRY_COUNT: '2'
+
+jobs:
+  self-test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start fixture static site
+        run: |
+          python3 -m http.server 8080 --directory tests/fixtures/site &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8080/index.html && break
+            sleep 1
+          done
+      - name: Run midscene-action (local)
+        uses: ./
+        with:
+          yaml-files: tests/fixtures/yaml
+          preview-url: http://127.0.0.1:8080/index.html
+          retries: '1'
+          max-cases: '5'
+          timeout-minutes: '10'
+          cli-version: ${{ inputs.cli-version }}

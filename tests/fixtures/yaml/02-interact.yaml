@@ -1,0 +1,9 @@
+web:
+  url: ${MIDSCENE_PREVIEW_URL}
+
+tasks:
+  - name: clicking the button updates the status text
+    flow:
+      - ai: click the "Click me" button
+      - sleep: 500
+      - aiAssert: the status text reads "Clicked"

@@ -1,0 +1,59 @@
+# Starter workflow: test a preview server started by the same job.
+# Copy this file to .github/workflows/midscene.yml in your repository.
+name: Midscene
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: midscene-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Only the API key is a secret; model name/base URL/family are repository
+# variables so the workflow stays readable. Configure them in repository
+# Settings → Secrets and variables → Actions.
+env:
+  MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+  MIDSCENE_MODEL_BASE_URL: ${{ vars.MIDSCENE_MODEL_BASE_URL }}
+  MIDSCENE_MODEL_NAME: ${{ vars.MIDSCENE_MODEL_NAME }}
+  MIDSCENE_MODEL_FAMILY: ${{ vars.MIDSCENE_MODEL_FAMILY }}
+
+jobs:
+  midscene:
+    # Fork pull requests do not receive secrets, so model calls cannot run.
+    # Never replace this with pull_request_target + an untrusted checkout.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # Build your app and start a preview server in the background.
+      - run: npm run build
+      - name: Start preview server
+        run: |
+          npm run preview -- --port 4173 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:4173 && break
+            sleep 1
+          done
+
+      - name: Run Midscene YAML scripts
+        uses: web-infra-dev/midscene-action@v0
+        with:
+          yaml-files: midscene-scripts
+          retries: '1'
+          max-cases: '20'
+          timeout-minutes: '10'
+          # Reference the URL in YAML as: web.url: ${MIDSCENE_PREVIEW_URL}
+          preview-url: http://127.0.0.1:4173

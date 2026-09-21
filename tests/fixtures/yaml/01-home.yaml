@@ -1,0 +1,7 @@
+web:
+  url: ${MIDSCENE_PREVIEW_URL}
+
+tasks:
+  - name: home page shows the app heading
+    flow:
+      - aiAssert: the page shows a heading "My App"

@@ -1,0 +1,7 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+coverage/
+
+# dist/ is built with @vercel/ncc and MUST be committed (required by GitHub Actions).
+!dist/
