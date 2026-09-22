@@ -6,6 +6,19 @@ import * as glob from '@actions/glob';
 import { reportDirFor } from './summary.js';
 import type { ActionInputs } from './types.js';
 
+/** Expand an artifact root to files only; directory entries break ZIP extraction. */
+export async function artifactFilesFor(root: string): Promise<string[]> {
+  const isDirectory = statSync(root).isDirectory();
+  if (!isDirectory) return [root.replace(/\\/g, '/')];
+
+  const pattern = path.join(root, '**', '*').replace(/\\/g, '/');
+  const globber = await glob.create(pattern, {
+    followSymbolicLinks: false,
+    matchDirectories: false,
+  });
+  return globber.glob();
+}
+
 /**
  * Upload the self-contained HTML report directory (and any extra paths) as a
  * workflow artifact. Always attempted, even when the run failed: the whole
@@ -26,11 +39,7 @@ export async function uploadReports(
     }
     try {
       const isDirectory = statSync(root).isDirectory();
-      const pattern = isDirectory
-        ? path.join(root, '**', '*').replace(/\\/g, '/')
-        : root.replace(/\\/g, '/');
-      const globber = await glob.create(pattern, { followSymbolicLinks: false });
-      const files = await globber.glob();
+      const files = await artifactFilesFor(root);
       if (files.length === 0) {
         core.info(`No files found under ${root}, skipping artifact upload.`);
         continue;

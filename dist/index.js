@@ -122977,6 +122977,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.artifactFilesFor = artifactFilesFor;
 exports.uploadReports = uploadReports;
 exports.resolveExtraPaths = resolveExtraPaths;
 const node_fs_1 = __nccwpck_require__(73024);
@@ -122985,6 +122986,18 @@ const artifact_1 = __nccwpck_require__(76846);
 const core = __importStar(__nccwpck_require__(37484));
 const glob = __importStar(__nccwpck_require__(47206));
 const summary_js_1 = __nccwpck_require__(28855);
+/** Expand an artifact root to files only; directory entries break ZIP extraction. */
+async function artifactFilesFor(root) {
+    const isDirectory = (0, node_fs_1.statSync)(root).isDirectory();
+    if (!isDirectory)
+        return [root.replace(/\\/g, '/')];
+    const pattern = node_path_1.default.join(root, '**', '*').replace(/\\/g, '/');
+    const globber = await glob.create(pattern, {
+        followSymbolicLinks: false,
+        matchDirectories: false,
+    });
+    return globber.glob();
+}
 /**
  * Upload the self-contained HTML report directory (and any extra paths) as a
  * workflow artifact. Always attempted, even when the run failed: the whole
@@ -123002,11 +123015,7 @@ async function uploadReports(inputs, extraReportFiles = []) {
         }
         try {
             const isDirectory = (0, node_fs_1.statSync)(root).isDirectory();
-            const pattern = isDirectory
-                ? node_path_1.default.join(root, '**', '*').replace(/\\/g, '/')
-                : root.replace(/\\/g, '/');
-            const globber = await glob.create(pattern, { followSymbolicLinks: false });
-            const files = await globber.glob();
+            const files = await artifactFilesFor(root);
             if (files.length === 0) {
                 core.info(`No files found under ${root}, skipping artifact upload.`);
                 continue;
