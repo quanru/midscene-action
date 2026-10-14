@@ -41,18 +41,18 @@ Use a clean output directory for each run: the Action expects one native run.
 
 ## CI
 
-The root CI installs this project and Chromium, then runs `npm test` through
+The `example-basic.yml` workflow installs this project and Chromium, then runs `npm test` through
 `uses: ./` with `publish-pages: 'false'`. The example calls the real model and
 must pass. CI downloads its report artifact and prepares a Pages site from the
 downloaded files. Only manual publication runs curl against the published HTML report.
 
-Configure the repository's `Model` environment with:
+Configure the repository's `CI` environment with:
 
 - Secret: `MIDSCENE_MODEL_API_KEY`.
 - Variables or secrets: `MIDSCENE_MODEL_NAME`, `MIDSCENE_MODEL_FAMILY`.
 - Optional variable or secret: `MIDSCENE_MODEL_BASE_URL`.
 
 Fork PRs run quality checks only because GitHub does not provide model secrets.
-Missing configuration in other CI runs fails the job. Manually dispatch `ci.yml` with
+Missing configuration in other CI runs fails the job. Manually dispatch `example-basic.yml` with
 `publish-pages` enabled to publish the same example to GitHub Pages and check the
 deployed report URLs with curl.

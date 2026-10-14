@@ -101,7 +101,7 @@ permissions:
   id-token: write
 
 environment:
-  name: Model
+  name: CI
   url: ${{ steps.midscene.outputs.page-url }}
 
 steps:
@@ -115,7 +115,7 @@ steps:
       publish-pages: 'true'
 ```
 
-将 `Model` 换成你的部署环境名称，并配置凭据和允许部署的分支。测试和发布使用同一个任务的环境和权限，部署要求见 [actions/deploy-pages](https://github.com/actions/deploy-pages#security-considerations)。
+将 `CI` 换成你的部署环境名称，并配置凭据和允许部署的分支。测试和发布使用同一个任务的环境和权限，部署要求见 [actions/deploy-pages](https://github.com/actions/deploy-pages#security-considerations)。
 
 在工作流顶层添加 `concurrency`，让同一站点的发布按顺序执行：
 

@@ -102,7 +102,7 @@ permissions:
   id-token: write
 
 environment:
-  name: Model
+  name: CI
   url: ${{ steps.midscene.outputs.page-url }}
 
 steps:
@@ -116,7 +116,7 @@ steps:
       publish-pages: 'true'
 ```
 
-Replace `Model` with your environment and configure its credentials and allowed deployment branches. Tests and publishing share the job's environment and permissions. See [actions/deploy-pages](https://github.com/actions/deploy-pages#security-considerations) for deployment requirements.
+Replace `CI` with your environment and configure its credentials and allowed deployment branches. Tests and publishing share the job's environment and permissions. See [actions/deploy-pages](https://github.com/actions/deploy-pages#security-considerations) for deployment requirements.
 
 Add `concurrency` at the workflow level so deployments to the same site run one at a time:
 
