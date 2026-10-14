@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push: {}
+  pull_request: {}
+  workflow_dispatch:
+    inputs:
+      publish-pages:
+        description: Deploy the example report to GitHub Pages.
+        type: boolean
+        default: false
+
+# Serialize manual publication so Pages history is read and deployed in order.
+concurrency:
+  group: midscene-ci-${{ inputs.publish-pages && 'pages' || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+
+    env:
+      HUSKY: '0'
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
+
+  integration:
+    needs: quality
+    # Fork PRs cannot access model secrets; quality checks still run there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: Model
+      url: ${{ steps.test.outputs.page-url }}
+
+    env:
+      MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+      MIDSCENE_MODEL_NAME: ${{ vars.MIDSCENE_MODEL_NAME || secrets.MIDSCENE_MODEL_NAME }}
+      MIDSCENE_MODEL_BASE_URL: ${{ vars.MIDSCENE_MODEL_BASE_URL || secrets.MIDSCENE_MODEL_BASE_URL }}
+      MIDSCENE_MODEL_FAMILY: ${{ vars.MIDSCENE_MODEL_FAMILY || secrets.MIDSCENE_MODEL_FAMILY }}
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: examples/basic/package-lock.json
+
+      - name: Install example dependencies and browser
+        working-directory: examples/basic
+        run: |
+          npm ci
+          npm run typecheck
+          npx playwright install --with-deps chromium
+
+      - name: Run real Midscene tests with this Action
+        uses: ./
+        id: test
+        with:
+          working-directory: examples/basic
+          command: npm test
+          publish-pages: ${{ github.event_name == 'workflow_dispatch' && inputs.publish-pages || false }}
+          artifact-name: integration-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download native report artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ steps.test.outputs.report-artifact-name }}
+          path: ${{ runner.temp }}/midscene-reports
+
+      - name: Prepare downloaded report
+        id: report
+        shell: bash
+        run: |
+          node src/prepare-pages-site.mjs \
+            --site "$RUNNER_TEMP/verify-pages" \
+            --reports "$RUNNER_TEMP/midscene-reports" \
+            --run-id "$GITHUB_RUN_ID" |
+            jq -r '"report-path=\(.reportHref // error("Downloaded report is missing"))"' >> "$GITHUB_OUTPUT"
+
+      - name: Check published report
+        if: ${{ inputs.publish-pages }}
+        env:
+          PAGE_URL: ${{ steps.test.outputs.page-url }}
+          REPORT_PATH: ${{ steps.report.outputs.report-path }}
+        run: >-
+          curl --fail --location --retry 10 --retry-all-errors --retry-delay 3 --max-time 15
+          --output /dev/null "${PAGE_URL%/}/$REPORT_PATH"

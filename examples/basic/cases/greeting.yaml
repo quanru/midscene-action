@@ -1,0 +1,6 @@
+cases:
+  - name: Submit a greeting with AI
+    steps:
+      - aiAct: Enter Alice in the Name field, then click Say hello.
+      - aiAssert: The page displays the greeting "Hello, Alice!".
+      - expectGreeting: {}

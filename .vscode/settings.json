@@ -1,0 +1,14 @@
+{
+  "cSpell.words": ["midscene", "rslint", "webinfra"],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "editor.codeActionsOnSave": {
+    "source.fixAll.rslint": "explicit"
+  },
+  "eslint.enable": false,
+  "rstack.fmt.enable": false,
+  "rstack.rstest.enable": false
+}

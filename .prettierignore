@@ -1,0 +1,9 @@
+node_modules/
+.pnpm-store/
+coverage/
+package-lock.json
+pnpm-lock.yaml
+
+**/.midscene/
+**/midscene_run/
+**/midscene-node-spec*.md

@@ -1,0 +1,22 @@
+{
+  "name": "midscene-action",
+  "version": "0.1.0",
+  "description": "GitHub Action for running Midscene tests and publishing native reports",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "lint": "rslint . --max-warnings=0 && prettier --check .",
+    "format": "rslint . --fix --max-warnings=0 && prettier --write .",
+    "check": "pnpm lint",
+    "prepare": "husky"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "devDependencies": {
+    "@rslint/core": "0.9.5",
+    "husky": "9.1.7",
+    "prettier": "3.9.10"
+  }
+}
