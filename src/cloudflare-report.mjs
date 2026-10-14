@@ -94,6 +94,7 @@ async function prepare() {
     JSON.stringify({
       name: process.env.CLOUDFLARE_WORKER_NAME,
       compatibility_date: '2026-10-14',
+      preview_urls: true,
       assets: { directory: './site', not_found_handling: 'none' },
       previews: {},
     }),

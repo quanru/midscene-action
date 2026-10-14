@@ -127,12 +127,16 @@ runs:
         workingDirectory: ${{ steps.report.outputs.directory }}
         command: preview --name run-${{ github.run_id }}-${{ github.run_attempt }}
 
-    - name: Add published report link to Summary
+    - name: Verify published report URL and write Summary
       if: ${{ steps.deployment.outcome == 'success' }}
       shell: bash
       env:
         PAGE_URL: ${{ steps.deployment.outputs.preview-deployment-url }}
       run: |
+        if [[ -z "$PAGE_URL" ]]; then
+          echo '::error::Cloudflare uploaded the report but returned no deployment URL. Open Workers & Pages > your Worker > Domains > Worker URL and enable Preview, then rerun the workflow.'
+          exit 1
+        fi
         echo "[Open the Midscene Test report ↗]($PAGE_URL)" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Preserve command failure

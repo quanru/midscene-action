@@ -108,7 +108,7 @@ Enable publishing and pass your Account ID and token:
     cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-The Worker name defaults to `midscene-reports`; set `cloudflare-worker-name` to use another name.
+The Worker name defaults to `midscene-reports`; set `cloudflare-worker-name` to use another name. For an existing Worker, enable **Preview** under **Domains → Worker URL** in its dashboard before publishing. The Action enables Preview URLs when it creates a new Worker. See [Preview URL setup](https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-preview-urls).
 
 Required publishing inputs are checked before tests start. Wrangler validates credentials and permissions during deployment; deployment failure fails the Action even if tests passed.
 

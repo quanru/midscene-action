@@ -107,7 +107,7 @@ Workers Previews 目前处于 open beta。本集成固定使用 Wrangler 4.136.3
     cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-Worker 名称默认是 `midscene-reports`，可通过 `cloudflare-worker-name` 修改。
+Worker 名称默认是 `midscene-reports`，可通过 `cloudflare-worker-name` 修改。使用已有 Worker 时，请先在控制台的 **Domains → Worker URL** 中开启 **Preview**。Action 自动创建新 Worker 时会启用 Preview URL。详见[官方设置说明](https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-preview-urls)。
 
 测试前只检查必填发布参数是否填写。凭据和权限由 Wrangler 在部署时验证；即使测试通过，部署失败也会使 Action 失败。
 
