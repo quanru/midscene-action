@@ -1,6 +1,6 @@
+/** @file Prepare a Midscene report for Cloudflare Workers Preview. */
 import {
   appendFile,
-  cp,
   mkdtemp,
   readFile,
   readdir,
@@ -10,8 +10,20 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 
-async function prepare() {
-  const results = path.resolve('.midscene/test-results');
+const RESULTS_DIRECTORY = path.join('.midscene', 'test-results');
+const REPORT_DIRECTORY = path.join('midscene_run', 'report');
+const SUMMARY_FILENAME = 'summary.json';
+const REPORT_ENTRY_FILENAME = 'index.html';
+const WRANGLER_CONFIG_FILENAME = 'wrangler.json';
+const COMPATIBILITY_DATE = '2026-10-14';
+
+/**
+ * Find and validate the  HTML report directory.
+ * @param {string} projectDirectory - Midscene test project directory.
+ * @returns {Promise<string>} Absolute report directory.
+ */
+async function resolveReportDirectory(projectDirectory) {
+  const results = path.join(projectDirectory, RESULTS_DIRECTORY);
   const entries = await readdir(results, { withFileTypes: true }).catch(
     (error) => {
       if (error.code === 'ENOENT') return [];
@@ -21,10 +33,9 @@ async function prepare() {
   const summaries = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const file = path.join(results, entry.name, 'summary.json');
+    const file = path.join(results, entry.name, SUMMARY_FILENAME);
     try {
-      await stat(file);
-      summaries.push(file);
+      if ((await stat(file)).isFile()) summaries.push(file);
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
     }
@@ -34,6 +45,7 @@ async function prepare() {
       'Expected one Midscene test result. Run midscene-test in working-directory with a clean output directory before publishing.',
     );
   }
+
   let report;
   let reportRoot;
   try {
@@ -43,7 +55,7 @@ async function prepare() {
     report = await realpath(
       path.resolve(path.dirname(summaries[0]), summary.report),
     );
-    reportRoot = await realpath('midscene_run/report');
+    reportRoot = await realpath(path.join(projectDirectory, REPORT_DIRECTORY));
   } catch {
     throw new Error(
       'Midscene HTML report not found. Run midscene-test in working-directory before publishing.',
@@ -53,49 +65,39 @@ async function prepare() {
   if (
     relative.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relative) ||
-    path.basename(report) !== 'index.html' ||
+    path.basename(report) !== REPORT_ENTRY_FILENAME ||
     !(await stat(report)).isFile()
   ) {
     throw new Error(
       'Midscene HTML report must be an index.html file under midscene_run/report.',
     );
   }
-  let fileCount = 0;
-  async function checkAssets(directory) {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const file = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        await checkAssets(file);
-      } else if (entry.isFile()) {
-        if (
-          ++fileCount > 20_000 ||
-          (await stat(file)).size > 25 * 1024 * 1024
-        ) {
-          throw new Error(
-            'Cloudflare Workers supports up to 20,000 files per deployment and 25 MiB per file. This report exceeds those limits.',
-          );
-        }
-      } else {
-        throw new Error(
-          'The published report must contain only regular files and directories, without symbolic links.',
-        );
-      }
-    }
+  const directory = path.dirname(report);
+  const assets = await readdir(directory, {
+    recursive: true,
+    withFileTypes: true,
+  });
+  if (assets.some((entry) => !entry.isFile() && !entry.isDirectory())) {
+    throw new Error(
+      'The published report must contain only regular files and directories, without symbolic links.',
+    );
   }
-  await checkAssets(path.dirname(report));
+  return directory;
+}
+
+/** Write Wrangler configuration and expose its directory to the Action. */
+async function prepare() {
+  const assets = await resolveReportDirectory(process.cwd());
   const directory = await mkdtemp(
     path.join(process.env.RUNNER_TEMP, 'midscene-report.'),
   );
-  await cp(path.dirname(report), path.join(directory, 'site'), {
-    recursive: true,
-  });
   await writeFile(
-    path.join(directory, 'wrangler.json'),
+    path.join(directory, WRANGLER_CONFIG_FILENAME),
     JSON.stringify({
       name: process.env.CLOUDFLARE_WORKER_NAME,
-      compatibility_date: '2026-10-14',
+      compatibility_date: COMPATIBILITY_DATE,
       preview_urls: true,
-      assets: { directory: './site', not_found_handling: 'none' },
+      assets: { directory: assets, not_found_handling: 'none' },
       previews: {},
     }),
   );

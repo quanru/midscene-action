@@ -89,11 +89,33 @@ jobs:
 
 ## 发布到 Cloudflare Workers
 
-Workers Previews 目前处于 open beta。本集成固定使用 Wrangler 4.136.3，需要通过一次真实 CI 部署验证账号配置。
+启用发布后，可以在工作流 Summary 中直接打开在线报告。首次使用时，先准备 Cloudflare 凭据并配置 GitHub 仓库。
 
-如需自动创建 Worker，Token 需要 Workers 产品级 **Admin** 权限。已有 Worker 时，按权限模型可以只授予该 Worker 的 **Editor**；Preview 存在尚未解决的[账号 Token 鉴权问题报告](https://github.com/cloudflare/workers-sdk/issues/15797)，需要实测验证。如果首次使用 Workers，请先在 Workers & Pages 中设置账号的 `workers.dev` 子域名。无需创建 Pages 项目，首次发布会创建 Worker。详见 [Workers Preview 官方文档](https://developers.cloudflare.com/workers/previews/get-started/)。
+### 1. 创建 Cloudflare API Token
 
-启用发布，传入 Account ID 和 Token：
+1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **My Profile → API Tokens**。
+2. 点击 **Create Token → Custom Token → Get started**，填写 Token 名称，例如 `midscene-reports`。
+3. 为用于托管报告的账号授予 **Workers 产品级 Admin** 权限，让 Action 能在首次发布时创建 Worker。将 Token 的访问范围限制到该账号。
+4. 点击 **Continue to summary → Create Token**，复制生成的 Token。Token 的值只会显示一次。
+
+详细说明见 Cloudflare 的 [Token 创建指南](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)和 [Workers 权限说明](https://developers.cloudflare.com/workers/authorization/workers/)。
+
+### 2. 获取 Cloudflare Account ID
+
+在 Cloudflare 控制台选择同一个账号，复制其 **Account ID**。具体位置见[获取 Account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)。
+
+如果首次使用 Workers，请先进入 **Workers & Pages**，设置账号的 `workers.dev` 子域名。
+
+### 3. 配置 GitHub 仓库凭据
+
+在 GitHub 仓库中进入 **Settings → Secrets and variables → Actions**：
+
+- 在 **Secrets** 标签页点击 **New repository secret**，名称填写 `CLOUDFLARE_API_TOKEN`，值填写刚才复制的 Token。
+- 在 **Variables** 标签页点击 **New repository variable**，名称填写 `CLOUDFLARE_ACCOUNT_ID`，值填写账号的 Account ID。
+
+### 4. 启用报告发布
+
+在工作流中传入已配置的凭据：
 
 ```yaml
 - name: Run tests and publish reports
@@ -107,17 +129,15 @@ Workers Previews 目前处于 open beta。本集成固定使用 Wrangler 4.136.3
     cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-Worker 名称默认是 `midscene-reports`，可通过 `cloudflare-worker-name` 修改。使用已有 Worker 时，请先在控制台的 **Domains → Worker URL** 中开启 **Preview**。Action 自动创建新 Worker 时会启用 Preview URL。详见[官方设置说明](https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-preview-urls)。
+Worker 名称默认是 `midscene-reports`，可通过 `cloudflare-worker-name` 修改。首次发布时 Action 会自动创建 Worker。每次运行或重跑都会获得独立的报告链接，显示在 Summary 中。
 
-测试前只检查必填发布参数是否填写。凭据和权限由 Wrangler 在部署时验证；即使测试通过，部署失败也会使 Action 失败。
+测试前会检查必填发布参数是否填写。凭据和权限由 Wrangler 在部署时验证；即使测试通过，部署失败也会使 Action 失败。
 
-每次运行或重跑自动创建名为 `run-<run_id>-<run_attempt>` 的 Preview，Summary 提供本次报告的独立链接。多个工作流可以共用一个 Worker。免费方案每个 Worker 最多支持 100 个 Preview，超过后 Cloudflare 自动删除最久未部署的 Preview，其报告链接会失效。详见 [Preview 限制](https://developers.cloudflare.com/workers/previews/#limits)。
-
-发布时请使用干净的测试输出目录：要求只有一个 `.midscene/test-results/*/summary.json`，且其中指向的 HTML 报告存在。静态资源访问免费；每次部署最多 20,000 个文件，单文件最多 25 MiB。详见 [Cloudflare 计费说明](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)和[限制](https://developers.cloudflare.com/workers/platform/limits/#static-assets)。
+发布时请使用干净的测试输出目录：要求只有一个 `.midscene/test-results/*/summary.json`，且其中指向的 HTML 报告存在。
 
 ## 报告与结果
 
-在工作流的 **Summary** 中查看测试结果，在 **Artifacts** 中下载报告。启用发布 并发布成功后，Summary 会提供在线报告链接。
+在工作流的 **Summary** 中查看测试结果，在 **Artifacts** 中下载报告。启用发布并发布成功后，Summary 会提供在线报告链接。
 
 测试失败后，Action 仍会收集报告；如果启用了发布，还会尝试发布。Action 最终仍会失败。
 

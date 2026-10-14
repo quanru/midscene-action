@@ -90,11 +90,33 @@ By default, the Action runs tests, uploads reports, and shows results in the Sum
 
 ## Publishing to Cloudflare Workers
 
-Workers Previews is currently in open beta. This integration pins Wrangler 4.136.3 and needs a real CI deployment to verify your account setup.
+Enable publishing to get an online report link in the workflow Summary. Set up your Cloudflare credentials and GitHub repository settings first.
 
-To create the Worker automatically, grant the API token **Workers Admin** at the Workers product scope. For an existing Worker, the permission model supports **Editor** scoped to that Worker; verify Preview deployment with your token, as [an account-token authentication issue remains open](https://github.com/cloudflare/workers-sdk/issues/15797). Configure your account’s `workers.dev` subdomain in Workers & Pages if you have not used Workers before. No Pages project is needed; the Worker is created on first publication. See the [Workers Preview guide](https://developers.cloudflare.com/workers/previews/get-started/).
+### 1. Create a Cloudflare API Token
 
-Enable publishing and pass your Account ID and token:
+1. Sign in to the [Cloudflare dashboard](https://dash.cloudflare.com/) and open **My Profile → API Tokens**.
+2. Select **Create Token → Custom Token → Get started** and name it, for example, `midscene-reports`.
+3. Grant **Admin** at the **Workers product** scope for the account that will host your reports. This lets the Action create the Worker on first publication. Restrict the token to that account.
+4. Select **Continue to summary → Create Token** and copy the token. Its value is shown only once.
+
+See Cloudflare’s [token creation guide](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) and [Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/).
+
+### 2. Get your Cloudflare Account ID
+
+Select the same account in the Cloudflare dashboard and copy its **Account ID**. See [Find your Account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/).
+
+If you have not used Workers before, open **Workers & Pages** and set up your account’s `workers.dev` subdomain.
+
+### 3. Configure GitHub repository credentials
+
+In your GitHub repository, open **Settings → Secrets and variables → Actions**:
+
+- On the **Secrets** tab, select **New repository secret**. Set the name to `CLOUDFLARE_API_TOKEN` and paste the token as its value.
+- On the **Variables** tab, select **New repository variable**. Set the name to `CLOUDFLARE_ACCOUNT_ID` and paste your Account ID as its value.
+
+### 4. Enable report publishing
+
+Pass the configured credentials to the Action:
 
 ```yaml
 - name: Run tests and publish reports
@@ -108,13 +130,11 @@ Enable publishing and pass your Account ID and token:
     cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-The Worker name defaults to `midscene-reports`; set `cloudflare-worker-name` to use another name. For an existing Worker, enable **Preview** under **Domains → Worker URL** in its dashboard before publishing. The Action enables Preview URLs when it creates a new Worker. See [Preview URL setup](https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-preview-urls).
+The Worker name defaults to `midscene-reports`; set `cloudflare-worker-name` to use another name. The Action creates the Worker on first publication. Each run or rerun gets its own report URL in the Summary.
 
 Required publishing inputs are checked before tests start. Wrangler validates credentials and permissions during deployment; deployment failure fails the Action even if tests passed.
 
-Each run attempt creates a Preview named `run-<run_id>-<run_attempt>`, with its own report URL in the Summary. Multiple workflows can share a Worker. On the free plan a Worker can have up to 100 Previews; Cloudflare automatically deletes the least recently deployed Preview when the limit is reached. Deleted reports’ URLs stop working. See [Preview limits](https://developers.cloudflare.com/workers/previews/#limits).
-
-Use a clean test output directory: publishing expects exactly one `.midscene/test-results/*/summary.json` with an existing HTML report. Static asset requests are free; each deployment must contain at most 20,000 files, with each file no larger than 25 MiB. See [Cloudflare pricing](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/) and [limits](https://developers.cloudflare.com/workers/platform/limits/#static-assets).
+Use a clean test output directory: publishing expects exactly one `.midscene/test-results/*/summary.json` with an existing HTML report.
 
 ## Reports and results
 
