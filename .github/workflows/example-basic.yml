@@ -6,14 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       publish-pages:
-        description: Deploy the example report to GitHub Pages.
+        description: Deploy the example report to Cloudflare Workers.
         type: boolean
         default: false
-
-# Serialize manual publication so Pages history is read and deployed in order.
-concurrency:
-  group: midscene-example-basic-${{ inputs.publish-pages && 'pages' || github.run_id }}
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -26,9 +21,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      actions: read
-      pages: write
-      id-token: write
     environment:
       name: CI
       url: ${{ steps.test.outputs.page-url }}
@@ -62,6 +54,8 @@ jobs:
           working-directory: examples/basic
           command: npm test
           publish-pages: ${{ github.event_name == 'workflow_dispatch' && inputs.publish-pages || false }}
+          cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           artifact-name: example-basic-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download native report artifact
@@ -70,21 +64,20 @@ jobs:
           name: ${{ steps.test.outputs.report-artifact-name }}
           path: ${{ runner.temp }}/midscene-reports
 
-      - name: Prepare downloaded report
-        id: report
+      - name: Verify downloaded native report
+        working-directory: ${{ runner.temp }}/midscene-reports
         shell: bash
         run: |
-          node src/prepare-pages-site.mjs \
-            --site "$RUNNER_TEMP/verify-pages" \
-            --reports "$RUNNER_TEMP/midscene-reports" \
-            --run-id "$GITHUB_RUN_ID" |
-            jq -r '"report-path=\(.reportHref // error("Downloaded report is missing"))"' >> "$GITHUB_OUTPUT"
+          shopt -s nullglob
+          summaries=(.midscene/test-results/*/summary.json)
+          [[ ${#summaries[@]} == 1 ]]
+          report=$(jq -er '.report | select(type == "string" and length > 0)' "${summaries[0]}")
+          test -s "$(dirname "${summaries[0]}")/$report"
 
       - name: Check published report
-        if: ${{ inputs.publish-pages }}
+        if: ${{ steps.test.outputs.page-url != '' }}
         env:
           PAGE_URL: ${{ steps.test.outputs.page-url }}
-          REPORT_PATH: ${{ steps.report.outputs.report-path }}
         run: >-
           curl --fail --location --retry 10 --retry-all-errors --retry-delay 3 --max-time 15
-          --output /dev/null "${PAGE_URL%/}/$REPORT_PATH"
+          --output /dev/null "$PAGE_URL"

@@ -43,8 +43,7 @@ Use a clean output directory for each run: the Action expects one native run.
 
 The `example-basic.yml` workflow installs this project and Chromium, then runs `npm test` through
 `uses: ./` with `publish-pages: 'false'`. The example calls the real model and
-must pass. CI downloads its report artifact and prepares a Pages site from the
-downloaded files. Only manual publication runs curl against the published HTML report.
+must pass. CI downloads its report artifact and verifies that the native HTML report exists. Only manual publication runs curl against the published HTML report.
 
 Configure the repository's `CI` environment with:
 
@@ -54,5 +53,15 @@ Configure the repository's `CI` environment with:
 
 Fork PRs run quality checks only because GitHub does not provide model secrets.
 Missing configuration in other CI runs fails the job. Manually dispatch `example-basic.yml` with
-`publish-pages` enabled to publish the same example to GitHub Pages and check the
+`publish-pages` enabled to publish the same example to Cloudflare Workers and check the
 deployed report URLs with curl.
+
+For publication, also configure the `CI` environment with:
+
+- Secret: `CLOUDFLARE_API_TOKEN` with Workers Admin permission at the Workers product scope for automatic creation, or Editor scoped to an existing Worker (verify Preview token support in CI).
+- Variable: `CLOUDFLARE_ACCOUNT_ID`. The default Worker name is `midscene-reports`; the first publication creates it.
+  Initialize the account’s workers.dev subdomain in the dashboard before first use.
+
+Each run or rerun creates a Preview named `run-<run_id>-<run_attempt>` and gets an
+independent report URL. On the free plan, Cloudflare keeps up to 100 Previews per
+Worker and deletes the least recently deployed Preview when full.

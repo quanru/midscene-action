@@ -1,5 +1,5 @@
-name: Midscene Tests
-description: Run caller commands, preserve native reports, and optionally deploy GitHub Pages.
+name: Midscene Visual Tests
+description: Run caller commands, preserve native reports, and optionally deploy Cloudflare Workers.
 inputs:
   working-directory:
     description: Caller-specified Midscene test project directory, used to run the command and collect reports.
@@ -14,8 +14,15 @@ inputs:
     description: Raw report retention in days.
     default: '14'
   publish-pages:
-    description: Set true to deploy native reports to GitHub Pages after testing.
+    description: Set true to deploy the native report to Cloudflare Workers after testing.
     default: 'false'
+  cloudflare-api-token:
+    description: Cloudflare API token. Workers Admin is needed to create a Worker; Editor can target an existing Worker. Required when publishing.
+  cloudflare-account-id:
+    description: Cloudflare account ID. Required when publishing.
+  cloudflare-worker-name:
+    description: Cloudflare Worker name. Created on first publication.
+    default: midscene-reports
 outputs:
   report-artifact-name:
     description: Uploaded report name, or empty when no files were uploaded.
@@ -27,8 +34,8 @@ outputs:
     description: Test command step outcome.
     value: ${{ steps.test.outcome }}
   page-url:
-    description: Deployed Pages URL, or empty when deployment did not succeed.
-    value: ${{ steps.deployment.outputs.page_url }}
+    description: URL of this run’s Cloudflare Workers report, or empty when deployment did not succeed.
+    value: ${{ steps.deployment.outputs.preview-deployment-url }}
   publication-result:
     description: Deployment step outcome (success, failure, skipped, or cancelled).
     value: ${{ steps.deployment.outcome }}
@@ -39,30 +46,28 @@ runs:
       shell: bash
       env:
         TEST_DIRECTORY: ${{ inputs.working-directory }}
+        TEST_COMMAND: ${{ inputs.command }}
         PUBLISH_PAGES: ${{ inputs.publish-pages }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.cloudflare-account-id }}
+        CLOUDFLARE_WORKER_NAME: ${{ inputs.cloudflare-worker-name }}
       run: |
         if [[ -z "$TEST_DIRECTORY" ]]; then
           echo 'working-directory is required' >&2
+          exit 1
+        fi
+        if [[ -z "$TEST_COMMAND" ]]; then
+          echo 'command is required' >&2
           exit 1
         fi
         if [[ "$PUBLISH_PAGES" != true && "$PUBLISH_PAGES" != false ]]; then
           echo 'publish-pages must be true or false' >&2
           exit 1
         fi
-
-    - name: Check GitHub Pages configuration
-      id: pages
-      if: ${{ inputs.publish-pages == 'true' }}
-      uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      with:
-        enablement: false
-
-    - name: Explain unavailable Pages configuration
-      if: ${{ failure() && steps.pages.outcome == 'failure' }}
-      shell: bash
-      run: |
-        echo "::error::GitHub Pages check failed. A maintainer must select Settings > Pages > Build and deployment > Source > GitHub Actions. See the configure-pages log for configuration or permission errors."
-        exit 1
+        if [[ "$PUBLISH_PAGES" == true && ( -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" || -z "$CLOUDFLARE_WORKER_NAME" ) ]]; then
+          echo '::error::Set cloudflare-api-token, cloudflare-account-id, and cloudflare-worker-name to publish reports.'
+          exit 1
+        fi
 
     - name: Run all Midscene cases
       id: test
@@ -71,12 +76,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         TEST_COMMAND: ${{ inputs.command }}
-      run: |
-        if [[ -z "$TEST_COMMAND" ]]; then
-          echo 'command is required' >&2
-          exit 1
-        fi
-        bash -e -o pipefail -c "$TEST_COMMAND"
+      run: bash -e -o pipefail -c "$TEST_COMMAND"
 
     - name: Upload Midscene test report
       id: upload-results
@@ -106,65 +106,34 @@ runs:
           echo "[Download test artifacts]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID#artifacts)"
         } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Find the latest published report artifact
-      id: previous-report
-      if: ${{ steps.pages.outcome == 'success' && steps.upload-results.outputs.artifact-id != '' }}
-      shell: bash
-      env:
-        GH_TOKEN: ${{ github.token }}
-        MIDSCENE_UPSTREAM_REPOSITORY: ${{ env.MIDSCENE_UPSTREAM_REPOSITORY || github.repository }}
-      run: node "$GITHUB_ACTION_PATH/src/trusted-report-runs.mjs" find-previous
-
-    - name: Download the latest published report
-      if: ${{ steps.pages.outcome == 'success' && steps.upload-results.outputs.artifact-id != '' && steps.previous-report.outputs.run_id != '' }}
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: ${{ steps.previous-report.outputs.name }}
-        run-id: ${{ steps.previous-report.outputs.run_id }}
-        github-token: ${{ github.token }}
-        path: ${{ runner.temp }}/previous-pages-artifact
-
-    - name: Extract the latest published report
-      if: ${{ steps.pages.outcome == 'success' && steps.upload-results.outputs.artifact-id != '' && steps.previous-report.outputs.run_id != '' }}
-      shell: bash
-      run: |
-        mkdir -p "$RUNNER_TEMP/previous-pages"
-        tar -xf "$RUNNER_TEMP/previous-pages-artifact/artifact.tar" -C "$RUNNER_TEMP/previous-pages"
-
-    - name: Prepare published report
-      if: ${{ steps.pages.outcome == 'success' && steps.upload-results.outputs.artifact-id != '' }}
+    - name: Prepare Cloudflare report
+      id: report
+      if: ${{ !cancelled() && inputs.publish-pages == 'true' && (steps.test.outcome == 'success' || steps.test.outcome == 'failure') }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: |
-        node "$GITHUB_ACTION_PATH/src/prepare-pages-site.mjs" \
-          --site "$RUNNER_TEMP/midscene-pages" \
-          --reports "$PWD" \
-          --run-id "$GITHUB_RUN_ID" \
-          --previous "$RUNNER_TEMP/previous-pages"
+      env:
+        CLOUDFLARE_WORKER_NAME: ${{ inputs.cloudflare-worker-name }}
+      run: node "$GITHUB_ACTION_PATH/src/cloudflare-report.mjs"
 
-    - name: Upload GitHub Pages report
-      id: upload-pages
-      if: ${{ steps.pages.outcome == 'success' && steps.upload-results.outputs.artifact-id != '' }}
-      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-      with:
-        name: midscene-e2e-report-pages-${{ github.run_attempt }}
-        path: ${{ runner.temp }}/midscene-pages
-        retention-days: 90
-
-    - name: Deploy report to GitHub Pages
+    - name: Deploy report to Cloudflare Workers
       id: deployment
-      if: ${{ steps.upload-pages.outcome == 'success' }}
-      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      if: ${{ !cancelled() && steps.report.outcome == 'success' }}
+      uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4
       with:
-        artifact_name: midscene-e2e-report-pages-${{ github.run_attempt }}
+        apiToken: ${{ inputs.cloudflare-api-token }}
+        accountId: ${{ inputs.cloudflare-account-id }}
+        wranglerVersion: '4.136.3'
+        packageManager: npm
+        workingDirectory: ${{ steps.report.outputs.directory }}
+        command: preview --name run-${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: Add published report link to Summary
       if: ${{ steps.deployment.outcome == 'success' }}
       shell: bash
       env:
-        PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        PAGE_URL: ${{ steps.deployment.outputs.preview-deployment-url }}
       run: |
-        echo "[Open the Midscene Test report ↗](${PAGE_URL%/}/runs/$GITHUB_RUN_ID/)" >> "$GITHUB_STEP_SUMMARY"
+        echo "[Open the Midscene Test report ↗]($PAGE_URL)" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Preserve command failure
       if: ${{ !cancelled() && steps.test.outcome == 'failure' }}
