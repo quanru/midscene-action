@@ -1,4 +1,4 @@
-name: Midscene Visual Tests
+name: Midscene Action
 description: Run Midscene tests in GitHub Actions and publish test reports to Cloudflare Workers.
 inputs:
   working-directory:
