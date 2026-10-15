@@ -1,55 +1,53 @@
-# Midscene Action
+# Midscene Github Action
 
-[English](README.md) | 简体中文
+<p align="center">
+  <a href="https://github.com/web-infra-dev/midscene-action/actions/workflows/ci.yml"><img src="https://github.com/web-infra-dev/midscene-action/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/web-infra-dev/midscene-action/tags"><img src="https://img.shields.io/github/v/tag/web-infra-dev/midscene-action?label=version&amp;sort=semver" alt="Latest version"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+</p>
 
-在 GitHub Actions 中运行 Midscene 测试并保存报告，支持发布到 Cloudflare Workers。
+<p align="center"><a href="README.md">English</a> | 简体中文</p>
 
-这个 Action 可以：
+Midscene Github Action 将测试执行与报告管理整合到 GitHub Actions 中，让每次 Midscene 测试的结果都方便查看、下载和分享。
 
-- 运行 Midscene 测试。
-- 在 Summary 中查看结果，下载测试报告。
-- 将每次运行的报告发布到 Cloudflare Workers，获得独立链接。
+- **查看结果**：在 Summary（运行摘要）中直接查看测试结果。
+- **下载报告**：完整报告自动归档到 Artifacts，随时下载。
+- **在线预览**：按需发布测试报告到 Cloudflare Workers，每次运行都有独立的报告链接。
 
-在运行这个 Action 前，请在工作流中安装依赖和浏览器、启动应用并配置模型。Action 会执行你的测试命令，并收集 Midscene 项目生成的报告。
+Action 会直接运行你配置的测试命令，请提前准备好测试所需的依赖、浏览器和模型配置。
 
 ## 使用方法
 
-所有可用参数见 [action.yml](action.yml)。
-
-Action 会将测试生成的 HTML 报告和结果文件上传为 GitHub Actions 构建产物（artifact）。在工作流运行页面的 **Artifacts** 区域，可以下载包含这些文件的 ZIP 压缩包。
+指定测试命令和项目目录：
 
 ```yaml
 - uses: web-infra-dev/midscene-action@v1
   with:
-    # 必填：运行测试的 Bash 命令。请先安装依赖。
-    command: npm test
-
-    # 必填：你要运行的 Midscene 测试项目目录，没有默认值。
-    # tests/midscene 仅为示例；项目位于仓库根目录时填 '.'。
     working-directory: tests/midscene
-
-    # 上传报告的名称，显示在运行页面的 Artifacts 区域。
-    # 同一次运行中，每次上传需使用不同名称。
-    # 默认：midscene-results
-    artifact-name: midscene-results
-
-    # 上传的报告在 GitHub Actions 中保留的天数，到期后自动删除。
-    # 默认：14
-    retention-days: '14'
-
-    # 发布到 Cloudflare Workers；仅接受 'true' 或 'false'。
-    # 默认：false
-    publish-pages: 'false'
+    command: npm test
 ```
 
-`artifact-name` 可自定义，推荐使用字母、数字、连字符或下划线，例如 `midscene-results`、`midscene-chromium`。同一次工作流运行中，每次上传的名称必须不同；不同次运行可以沿用相同名称。
+## 输入参数
 
-### 基础用法
+在 `with` 中设置参数，定义见 [action.yml](action.yml)。
 
-下面假设测试项目位于 `tests/midscene`，使用 npm 和 Playwright Chromium。根据项目调整安装步骤和测试命令。
+| 参数                     | 是否必填                         | 默认值             | 说明                                                                                                                              |
+| ------------------------ | -------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `working-directory`      | 是                               | 无                 | Midscene 测试项目目录，相对于工作区。项目位于仓库根目录时填 `.`。                                                                 |
+| `command`                | 是                               | 无                 | 指定运行 Midscene 项目测试的命令，例如 `npm test`。                                                                               |
+| `artifact-name`          | 否                               | `midscene-results` | 上传的报告名称，显示在 Artifacts 中。推荐使用字母、数字、连字符和下划线；多个测试步骤或并行任务使用此 Action 时，请设置不同名称。 |
+| `retention-days`         | 否                               | `14`               | Artifacts 中报告文件的保留天数，到期后自动删除。                                                                                  |
+| `publish-pages`          | 否                               | `false`            | 是否将测试报告发布到 Cloudflare Workers。仅接受 `true` 或 `false`。                                                               |
+| `cloudflare-api-token`   | `publish-pages` 为 `true` 时必填 | 无                 | Cloudflare API Token，请通过 GitHub Secrets 传入。                                                                                |
+| `cloudflare-account-id`  | `publish-pages` 为 `true` 时必填 | 无                 | Cloudflare 账号 ID。                                                                                                              |
+| `cloudflare-worker-name` | 否                               | `midscene-reports` | 托管报告的 Worker 名称。首次发布时，如 Worker 尚不存在，Action 会自动创建。                                                       |
+
+## 完整示例
+
+下面以位于 `tests/midscene` 的测试项目为例，使用 npm 安装依赖、Chromium 运行测试。你可以根据项目实际情况调整目录、安装步骤和测试命令。
 
 ```yaml
-name: Midscene tests
+name: Midscene Visual Tests
 
 on:
   push:
@@ -85,37 +83,30 @@ jobs:
           command: npm test
 ```
 
-默认情况下，Action 会运行测试、上传报告，并在 Summary 中展示结果。如果使用 `command: pnpm test` 等其他测试命令，请先在前面的步骤中安装包管理器和依赖。
+## 发布报告到 Cloudflare Workers
 
-## 发布到 Cloudflare Workers
+将 `publish-pages` 设置为 `true`，即可将测试报告发布到 Cloudflare Workers。
 
-启用发布后，可以在工作流 Summary 中直接打开在线报告。首次使用时，先准备 Cloudflare 凭据并配置 GitHub 仓库。
+- **免费托管**：无需升级付费方案，报告静态文件的存储和访问免费。[计费说明](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)
+- **保留上限**：免费方案最多保留最近 100 份 Midscene 测试报告，超出后自动删除最久未更新的报告，旧链接随之失效。[限制说明](https://developers.cloudflare.com/workers/previews/#limits)
+- **文件限制**：免费方案通常足以托管测试报告，支持每次上传最多 20,000 个文件，单个文件最大 25 MiB。[官方限制](https://developers.cloudflare.com/workers/platform/limits/#static-assets)
 
-### 1. 创建 Cloudflare API Token
+首次使用时，请完成以下配置。
 
-1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **My Profile → API Tokens**。
-2. 点击 **Create Token → Custom Token → Get started**，填写 Token 名称，例如 `midscene-reports`。
-3. 为用于托管报告的账号授予 **Workers 产品级 Admin** 权限，让 Action 能在首次发布时创建 Worker。将 Token 的访问范围限制到该账号。
-4. 点击 **Continue to summary → Create Token**，复制生成的 Token。Token 的值只会显示一次。
+### 创建 API Token
 
-详细说明见 Cloudflare 的 [Token 创建指南](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)和 [Workers 权限说明](https://developers.cloudflare.com/workers/authorization/workers/)。
+根据是否提前创建 Worker，选择对应的 Token 权限：
 
-### 2. 获取 Cloudflare Account ID
+| 发布方式                       | 准备工作                                                                                                                                                                                                                                                                                                                     | 获取 Token                                                                                                                                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **⭐ 使用已有 Worker（推荐）** | <ul><li>在 <strong>Workers &amp; Pages</strong> 中创建 Worker，将 <code>cloudflare-worker-name</code> 设置为其名称。</li><li>在 <strong>Domains → Worker URL</strong> 中开启 <strong>Preview</strong>。</li></ul>[![Worker 的 Preview 开关位置](assets/cloudflare-worker-preview.png)](assets/cloudflare-worker-preview.png) | 选择 **Specified Workers**，选中目标 Worker，勾选 **Individual Workers → Editor**。<br><br>[![指定 Worker 的 Editor 权限配置](assets/cloudflare-worker-editor.png)](assets/cloudflare-worker-editor.png) |
+| 自动创建 Worker                | 无需提前创建，Action 会按 `cloudflare-worker-name` 创建 Worker。                                                                                                                                                                                                                                                             | 选择 **Entire Account**，勾选 **Workers → Admin**，可管理该账号下的所有 Worker。<br><br>[![Workers 产品级 Admin 权限配置](assets/cloudflare-workers-admin.png)](assets/cloudflare-workers-admin.png)     |
 
-在 Cloudflare 控制台选择同一个账号，复制其 **Account ID**。具体位置见[获取 Account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)。
+创建成功后，在弹出的提示框中复制 API Token 和 Account ID。API Token 仅显示一次，请及时保存。
 
-如果首次使用 Workers，请先进入 **Workers & Pages**，设置账号的 `workers.dev` 子域名。
+### 启用发布
 
-### 3. 配置 GitHub 仓库凭据
-
-在 GitHub 仓库中进入 **Settings → Secrets and variables → Actions**：
-
-- 在 **Secrets** 标签页点击 **New repository secret**，名称填写 `CLOUDFLARE_API_TOKEN`，值填写刚才复制的 Token。
-- 在 **Variables** 标签页点击 **New repository variable**，名称填写 `CLOUDFLARE_ACCOUNT_ID`，值填写账号的 Account ID。
-
-### 4. 启用报告发布
-
-在工作流中传入已配置的凭据：
+将 API Token 保存为仓库 Secret `CLOUDFLARE_API_TOKEN`，Account ID 保存为仓库 Variable `CLOUDFLARE_ACCOUNT_ID`，然后按以下示例配置：
 
 ```yaml
 - name: Run tests and publish reports
@@ -124,35 +115,40 @@ jobs:
   with:
     working-directory: tests/midscene
     command: npm test
-    publish-pages: 'true'
+    publish-pages: true
     cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-Worker 名称默认是 `midscene-reports`，可通过 `cloudflare-worker-name` 修改。首次发布时 Action 会自动创建 Worker。每次运行或重跑都会获得独立的报告链接，显示在 Summary 中。
-
-测试前会检查必填发布参数是否填写。凭据和权限由 Wrangler 在部署时验证；即使测试通过，部署失败也会使 Action 失败。
-
-发布时请使用干净的测试输出目录：要求只有一个 `.midscene/test-results/*/summary.json`，且其中指向的 HTML 报告存在。
+cloudflare-worker-name 默认为 midscene-reports。如需发布到已有 Worker，请填写其在 Cloudflare 中的名称。
 
 ## 报告与结果
 
-在工作流的 **Summary** 中查看测试结果，在 **Artifacts** 中下载报告。启用发布并发布成功后，Summary 会提供在线报告链接。
+测试完成后，可在执行 Summary 中查看结果、预览报告：
 
-测试失败后，Action 仍会收集报告；如果启用了发布，还会尝试发布。Action 最终仍会失败。
+![Summary 中的测试结果、报告下载和在线报告入口](assets/test-summary.png)
 
 ## 输出
 
-通过 `${{ steps.midscene.outputs.<输出名称> }}` 读取：
+给 Action 步骤设置 `id: midscene`，即可通过 `${{ steps.midscene.outputs.<name> }}` 读取输出。
 
-| Output                 | 说明                       |
+| 输出                   | 说明                       |
 | ---------------------- | -------------------------- |
 | `test-result`          | 测试命令状态。             |
-| `report-artifact-name` | 包含报告的构建产物名称。   |
-| `artifact-url`         | 构建产物下载页面链接。     |
+| `report-artifact-name` | 已上传的报告名称。         |
+| `artifact-url`         | 报告下载页面链接。         |
 | `page-url`             | 发布成功后的本次报告地址。 |
 | `publication-result`   | 部署步骤状态。             |
 
-## 贡献
+## 示例
+
+- [Basic](.github/workflows/example-basic.yml)：使用 AI 操作本地问候表单，并验证 DOM 结果。
+- [TodoMVC](.github/workflows/example-todomvc.yml)：结合自定义 Todo Node、YAML 生命周期钩子、AI 操作和精确的 DOM 断言。
+
+## 参与贡献
 
 开发、验证和发布说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 许可证
+
+[MIT](LICENSE.md)。

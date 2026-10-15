@@ -1,8 +1,10 @@
 name: Example Basic
 
 on:
-  push: {}
-  pull_request: {}
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       publish-pages:
@@ -56,6 +58,7 @@ jobs:
           publish-pages: ${{ github.event_name == 'workflow_dispatch' && inputs.publish-pages || false }}
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          cloudflare-worker-name: midscene-reports
           artifact-name: example-basic-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Download native report artifact

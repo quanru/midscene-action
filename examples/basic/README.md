@@ -42,7 +42,7 @@ Use a clean output directory for each run: the Action expects one native run.
 ## CI
 
 The `example-basic.yml` workflow installs this project and Chromium, then runs `npm test` through
-`uses: ./` with `publish-pages: 'false'`. The example calls the real model and
+`uses: ./` with `publish-pages: false`. The example calls the real model and
 must pass. CI downloads its report artifact and verifies that the native HTML report exists. Only manual publication runs curl against the published HTML report.
 
 Configure the repository's `CI` environment with:
