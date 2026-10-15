@@ -152,3 +152,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to develop, check, and release ch
 ## License
 
 [MIT](LICENSE.md).
+
+Built with [Midscene](https://github.com/web-infra-dev/midscene) and [Cloudflare Workers](https://workers.cloudflare.com/).

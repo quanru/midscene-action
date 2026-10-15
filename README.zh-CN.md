@@ -152,3 +152,5 @@ cloudflare-worker-name 默认为 midscene-reports。如需发布到已有 Worker
 ## 许可证
 
 [MIT](LICENSE.md)。
+
+Built with [Midscene](https://github.com/web-infra-dev/midscene) and [Cloudflare Workers](https://workers.cloudflare.com/).
