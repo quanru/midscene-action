@@ -5,12 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      publish-pages:
-        description: Deploy the example report to Cloudflare Workers.
-        type: boolean
-        default: false
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -55,7 +50,7 @@ jobs:
         with:
           working-directory: examples/basic
           command: npm test
-          publish-pages: ${{ github.event_name == 'workflow_dispatch' && inputs.publish-pages || false }}
+          publish-pages: true
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           cloudflare-account-id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           cloudflare-worker-name: midscene-reports

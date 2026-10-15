@@ -76,8 +76,9 @@ Both examples share the repository's `CI` environment:
 
 Fork PRs run quality checks only because model secrets are unavailable. Other
 runs require a working model configuration and must pass both cases.
-Manual dispatch with `publish-pages` enabled also publishes the TodoMVC report
-to Cloudflare Workers and checks its URL. See the
+Every test run automatically publishes the TodoMVC report to Cloudflare Workers
+and checks its URL, including manual workflow runs. Missing publication
+configuration fails the job. See the
 [basic example's publication setup](../basic/README.md#ci) for the Cloudflare
 credentials. Both workflows use the default `midscene-reports` Worker. Each
 workflow run has its own run ID and Preview URL, so their reports stay separate.

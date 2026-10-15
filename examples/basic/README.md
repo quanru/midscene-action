@@ -42,8 +42,9 @@ Use a clean output directory for each run: the Action expects one native run.
 ## CI
 
 The `example-basic.yml` workflow installs this project and Chromium, then runs `npm test` through
-`uses: ./` with `publish-pages: false`. The example calls the real model and
-must pass. CI downloads its report artifact and verifies that the native HTML report exists. Only manual publication runs curl against the published HTML report.
+`uses: ./` with `publish-pages: true`. The example calls the real model and
+must pass. CI downloads its report artifact, verifies that the native HTML report
+exists, and checks the published Cloudflare Workers report URL with curl.
 
 Configure the repository's `CI` environment with:
 
@@ -52,9 +53,8 @@ Configure the repository's `CI` environment with:
 - Optional variable or secret: `MIDSCENE_MODEL_BASE_URL`.
 
 Fork PRs run quality checks only because GitHub does not provide model secrets.
-Missing configuration in other CI runs fails the job. Manually dispatch `example-basic.yml` with
-`publish-pages` enabled to publish the same example to Cloudflare Workers and check the
-deployed report URLs with curl.
+Every test run publishes its report automatically, including manual workflow
+runs. Missing model or publication configuration fails the job.
 
 For publication, also configure the `CI` environment with:
 
