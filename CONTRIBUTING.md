@@ -1,50 +1,40 @@
 # Contributing to Midscene Action
 
-Thanks for your interest in contributing! Bug reports, documentation improvements,
-and pull requests are welcome.
+Bug reports, documentation improvements, and pull requests are welcome.
 
-## Setup
+## Development
 
-Fork and clone the repository. Use Node.js 24 and pnpm, then install dependencies:
+Create a branch for your changes. Use Node.js 24 and pnpm:
 
 ```sh
 pnpm install --frozen-lockfile
-```
-
-## Making changes
-
-Create a branch for your changes. No build step is needed.
-
-```text
-.
-├── action.yml                  # Composite Action entry point
-└── src/
-    └── cloudflare-report.mjs   # Report preparation and Wrangler configuration
-```
-
-Keep the English and Chinese READMEs and examples in sync when changing inputs,
-outputs, or usage.
-
-## Checks
-
-Run lint and formatting checks before opening a pull request:
-
-```sh
 pnpm check
 ```
 
-To apply fixes:
+Use `pnpm format` to fix lint and formatting issues. Keep both READMEs and examples
+in sync when changing usage.
 
-```sh
-pnpm format
-```
-
-For changes to test execution or reports, follow the
-[basic example](examples/basic/README.md) to run the end-to-end tests. These tests
-require model credentials. CI also runs the example through the Action; fork pull
-requests run quality checks only.
+For changes to test execution or reports, run the [basic](examples/basic/README.md)
+and [TodoMVC](examples/todomvc/README.md) examples with model credentials.
 
 ## Pull requests
 
-Open a pull request against `main`. Describe what changed, why, and how you
-verified it. Link any related issues.
+Open a pull request against `main`. Describe the change and how you tested it.
+
+## Releases
+
+Publish from the GitHub website:
+
+1. Confirm that CI and both example workflows pass for the commit you want to release.
+2. Open **Releases → Draft a new release** and create a `vX.Y.Z` tag, such as
+   `v1.0.0`, for that commit.
+3. Write or generate the release notes. Review them and explain any breaking changes.
+4. Select **Publish this Action to the GitHub Marketplace** and publish the release.
+5. Check that **Update major version tag** succeeds in the Actions tab. If it fails,
+   rerun the workflow.
+
+The [release workflow](.github/workflows/release.yml) updates `v1`, `v2`, etc.
+automatically for stable releases. Prereleases are skipped. Keep specific version
+tags such as `v1.0.0` unchanged.
+
+GitHub Release Notes serve as the changelog.
