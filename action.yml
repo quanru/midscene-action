@@ -1,5 +1,8 @@
 name: Midscene Action
 description: Run Midscene tests in GitHub Actions and publish test reports to Cloudflare Workers.
+branding:
+  icon: activity
+  color: white
 inputs:
   working-directory:
     description: Caller-specified Midscene test project directory, used to run the command and collect reports.
