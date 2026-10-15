@@ -8,13 +8,18 @@
 
 <p align="center"><a href="README.md">English</a> | 简体中文</p>
 
-在 GitHub Actions 中运行 [Midscene](https://github.com/web-infra-dev/midscene) 测试，下载或分享测试报告。
+在 GitHub Actions 中运行 [Midscene Test](https://midscenejs.com/zh/midscene-test/overview.html) 测试，下载或分享测试报告。
 
 ## 功能
 
 - 在工作流摘要中查看测试结果。
 - 将 HTML 报告和测试数据保存为 Artifacts，供下载查看。
 - 按需将报告发布到 Cloudflare Workers，每次运行都有独立链接。
+
+## 示例
+
+- [Basic](.github/workflows/example-basic.yml)：使用 AI 提交问候表单并检查结果。
+- [TodoMVC](.github/workflows/example-todomvc.yml)：使用 AI 管理待办事项，并通过自定义 Node 验证结果。
 
 ## 使用方法
 
@@ -24,8 +29,9 @@
 - uses: web-infra-dev/midscene-action@v1
   with:
     working-directory: tests/midscene
-    command: npm test
 ```
+
+默认执行 `npx midscene-test`；如需使用 `npm test` 等其他测试命令，可设置 `command`。
 
 运行 Action 前，请安装测试依赖和浏览器、配置模型，并按需启动待测应用。
 
@@ -34,7 +40,7 @@
 以下示例适用于位于 `tests/midscene` 的 Playwright 测试项目：
 
 ```yaml
-name: Midscene Visual Tests
+name: Midscene E2E Tests
 
 on:
   push:
@@ -76,16 +82,16 @@ jobs:
 
 完整定义见 [action.yml](action.yml)。
 
-| 参数                     | 是否必填   | 默认值             | 说明                                                            |
-| ------------------------ | ---------- | ------------------ | --------------------------------------------------------------- |
-| `working-directory`      | 是         | 无                 | 测试项目目录，相对于工作区。仓库根目录填 `.`。                  |
-| `command`                | 是         | 无                 | 在 Bash 中运行的测试命令，例如 `npm test`。                     |
-| `artifact-name`          | 否         | `midscene-results` | Artifact 名称，同一次工作流运行中必须唯一。                     |
-| `retention-days`         | 否         | `14`               | Artifact 的保留天数。                                           |
-| `publish-pages`          | 否         | `false`            | 设为 `true` 时将报告发布到 Cloudflare Workers。                 |
-| `cloudflare-api-token`   | 发布时必填 | 无                 | Cloudflare API Token，通过 GitHub Actions Secret 传入。         |
-| `cloudflare-account-id`  | 发布时必填 | 无                 | Cloudflare 账号 ID。                                            |
-| `cloudflare-worker-name` | 否         | `midscene-reports` | Worker 名称。不存在时，若 Token 有相应权限，Action 会自动创建。 |
+| 参数                     | 是否必填   | 默认值              | 说明                                                                   |
+| ------------------------ | ---------- | ------------------- | ---------------------------------------------------------------------- |
+| `working-directory`      | 是         | 无                  | 测试项目目录，相对于工作区。仓库根目录填 `.`。                         |
+| `command`                | 否         | `npx midscene-test` | 在 Bash 中运行 Midscene 测试的命令，可按需改为 `npm test` 等项目脚本。 |
+| `artifact-name`          | 否         | `midscene-results`  | Artifact 名称，同一次工作流运行中必须唯一。                            |
+| `retention-days`         | 否         | `14`                | Artifact 的保留天数。                                                  |
+| `publish-pages`          | 否         | `false`             | 设为 `true` 时将报告发布到 Cloudflare Workers。                        |
+| `cloudflare-api-token`   | 发布时必填 | 无                  | Cloudflare API Token，通过 GitHub Actions Secret 传入。                |
+| `cloudflare-account-id`  | 发布时必填 | 无                  | Cloudflare 账号 ID。                                                   |
+| `cloudflare-worker-name` | 否         | `midscene-reports`  | Worker 名称。不存在时，若 Token 有相应权限，Action 会自动创建。        |
 
 ## 发布报告到 Cloudflare Workers
 
@@ -146,11 +152,6 @@ jobs:
 | `artifact-url`         | Artifact 下载页面链接。                                    |
 | `page-url`             | 在线报告链接。未成功发布时为空。                           |
 | `publication-result`   | 部署结果：`success`、`failure`、`skipped` 或 `cancelled`。 |
-
-## 示例
-
-- [Basic](.github/workflows/example-basic.yml)：使用 AI 提交问候表单并检查结果。
-- [TodoMVC](.github/workflows/example-todomvc.yml)：使用 AI 管理待办事项，并通过自定义 Node 验证结果。
 
 ## 参与贡献
 

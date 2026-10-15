@@ -8,13 +8,18 @@
 
 <p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
-Run [Midscene](https://github.com/web-infra-dev/midscene) tests in GitHub Actions, with reports you can download or share.
+Run [Midscene Test](https://midscenejs.com/midscene-test/overview.html) tests in GitHub Actions, with reports you can download or share.
 
 ## Features
 
 - Test results in the workflow summary.
 - HTML reports and test data uploaded as artifacts.
 - Optional report hosting on Cloudflare Workers, with a URL for each run.
+
+## Examples
+
+- [Basic](.github/workflows/example-basic.yml): submit a greeting form with AI and check the result.
+- [TodoMVC](.github/workflows/example-todomvc.yml): manage todos with AI and verify the results with custom Nodes.
 
 ## Usage
 
@@ -24,8 +29,9 @@ Add the Action to your workflow:
 - uses: web-infra-dev/midscene-action@v1
   with:
     working-directory: tests/midscene
-    command: npm test
 ```
+
+By default, the Action runs `npx midscene-test`. Set `command` to use a different test command, such as `npm test`.
 
 Install your test dependencies and browsers, configure your model, and start any application under test before running the Action.
 
@@ -34,7 +40,7 @@ Install your test dependencies and browsers, configure your model, and start any
 For a Playwright project in `tests/midscene`:
 
 ```yaml
-name: Midscene Visual Tests
+name: Midscene E2E Tests
 
 on:
   push:
@@ -76,16 +82,16 @@ Set the model secret and variables used above in your repository's **Settings �
 
 See [action.yml](action.yml) for the full definitions.
 
-| Input                    | Required        | Default            | Description                                                                         |
-| ------------------------ | --------------- | ------------------ | ----------------------------------------------------------------------------------- |
-| `working-directory`      | Yes             | None               | Test project directory, relative to the workspace. Use `.` for the repository root. |
-| `command`                | Yes             | None               | Test command to run in Bash, e.g. `npm test`.                                       |
-| `artifact-name`          | No              | `midscene-results` | Artifact name. Must be unique within a workflow run.                                |
-| `retention-days`         | No              | `14`               | Artifact retention period in days.                                                  |
-| `publish-pages`          | No              | `false`            | Set to `true` to publish reports to Cloudflare Workers.                             |
-| `cloudflare-api-token`   | When publishing | None               | Cloudflare API token, passed from a GitHub Actions secret.                          |
-| `cloudflare-account-id`  | When publishing | None               | Cloudflare account ID.                                                              |
-| `cloudflare-worker-name` | No              | `midscene-reports` | Worker name. Created automatically if needed and the token has permission.          |
+| Input                    | Required        | Default             | Description                                                                                            |
+| ------------------------ | --------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
+| `working-directory`      | Yes             | None                | Test project directory, relative to the workspace. Use `.` for the repository root.                    |
+| `command`                | No              | `npx midscene-test` | Command to run Midscene tests in Bash. Override it with a project script such as `npm test` if needed. |
+| `artifact-name`          | No              | `midscene-results`  | Artifact name. Must be unique within a workflow run.                                                   |
+| `retention-days`         | No              | `14`                | Artifact retention period in days.                                                                     |
+| `publish-pages`          | No              | `false`             | Set to `true` to publish reports to Cloudflare Workers.                                                |
+| `cloudflare-api-token`   | When publishing | None                | Cloudflare API token, passed from a GitHub Actions secret.                                             |
+| `cloudflare-account-id`  | When publishing | None                | Cloudflare account ID.                                                                                 |
+| `cloudflare-worker-name` | No              | `midscene-reports`  | Worker name. Created automatically if needed and the token has permission.                             |
 
 ## Publish reports to Cloudflare Workers
 
@@ -146,11 +152,6 @@ Set `id: midscene` on the Action step to read its outputs with `${{ steps.midsce
 | `artifact-url`         | Download page for the uploaded artifact.                             |
 | `page-url`             | Published report URL, or empty if publishing did not succeed.        |
 | `publication-result`   | Deployment outcome: `success`, `failure`, `skipped`, or `cancelled`. |
-
-## Examples
-
-- [Basic](.github/workflows/example-basic.yml): submit a greeting form with AI and check the result.
-- [TodoMVC](.github/workflows/example-todomvc.yml): manage todos with AI and verify the results with custom Nodes.
 
 ## Contributing
 
